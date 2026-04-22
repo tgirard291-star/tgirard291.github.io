@@ -137,7 +137,7 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-const API_URL = "https://script.google.com/macros/s/AKfycby4yDcNb77gA7vSLIbV25UzkmyGJP43SrWerG5nY-yzJH7gs1Vc78E_Sy02qMdxF48DCw/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbxw-cgl_ZMEvjPDzg5CDMOgPVgod2FLw1WW_BFKTwwh3wNbcdebn2GC7Pr41S02_kUEXg/exec";
 
 let appData = JSON.parse(localStorage.getItem('mn_data') || 'null') || {
   ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
@@ -171,6 +171,22 @@ function populateSelects(){
   });
 }
 
+async function sendToSheet(entry){
+  try {
+    const params = new URLSearchParams({
+      action: 'add',
+      date: entry.date,
+      ouvrier: entry.ouvrier,
+      chantier: entry.chantier,
+      heures: entry.heures,
+      note: entry.note || ''
+    });
+    const r = await fetch(API_URL + '?' + params.toString(), { method: 'GET' });
+    const j = await r.json();
+    return j.success;
+  } catch(e) { return false; }
+}
+
 async function submitEntry(){
   const ouvrier=document.getElementById('sel-ouvrier').value;
   const date=document.getElementById('inp-date').value;
@@ -187,17 +203,6 @@ async function submitEntry(){
   if(!sent){ appData.pending.push(entry); save(); toast('Sauvegardé localement (hors ligne)',false); }
   else{ toast('Enregistré dans Google Sheets !'); }
   updatePendingInfo();
-}
-
-async function sendToSheet(entry){
-  try{
-    const r = await fetch(API_URL, {
-      method:'POST', body:JSON.stringify(entry),
-      headers:{'Content-Type':'application/json'}
-    });
-    const j = await r.json();
-    return j.success;
-  }catch(e){ return false; }
 }
 
 async function syncPending(){
