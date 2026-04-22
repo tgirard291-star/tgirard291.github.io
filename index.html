@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-title" content="Pointage"/>
+<title>Pointage Heures</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f4f0;color:#2c2c2a;min-height:100vh}
+.header{background:#2c2c2a;color:#fff;padding:14px 16px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:10}
+.header-title{font-size:16px;font-weight:600}
+.header-sub{font-size:12px;opacity:.6}
+.tabs{display:flex;background:#fff;border-bottom:1px solid #e0dfd8;overflow-x:auto}
+.tab{flex:1;min-width:80px;padding:12px 8px;font-size:13px;text-align:center;cursor:pointer;border:none;background:none;color:#888;white-space:nowrap}
+.tab.active{color:#2c2c2a;font-weight:600;border-bottom:2px solid #2c2c2a}
+.section{display:none;padding:16px;max-width:600px;margin:0 auto}
+.section.active{display:block}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+label{font-size:12px;color:#888;font-weight:500;display:block;margin-bottom:4px;margin-top:12px}
+label:first-child{margin-top:0}
+select,input,textarea{width:100%;padding:10px 12px;border:1px solid #e0dfd8;border-radius:8px;font-size:15px;font-family:inherit;background:#fff;color:#2c2c2a;-webkit-appearance:none}
+textarea{min-height:70px;resize:vertical}
+select:focus,input:focus,textarea:focus{outline:none;border-color:#2c2c2a}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:12px 20px;font-size:15px;border-radius:10px;cursor:pointer;font-family:inherit;border:none;font-weight:500;transition:all .15s;width:100%;margin-top:14px}
+.btn-primary{background:#2c2c2a;color:#fff}
+.btn-primary:active{background:#444}
+.btn-secondary{background:#f0ede6;color:#2c2c2a;margin-top:8px}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
+.badge-h{background:#eaf3de;color:#3b6d11}
+.entry{padding:12px 0;border-bottom:1px solid #f0ede6;display:flex;flex-direction:column;gap:4px}
+.entry:last-child{border-bottom:none}
+.entry-top{display:flex;align-items:center;justify-content:space-between}
+.entry-name{font-weight:600;font-size:14px}
+.entry-detail{font-size:13px;color:#888}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.stat{background:#fff;border-radius:10px;padding:14px;text-align:center}
+.stat-n{font-size:26px;font-weight:600}
+.stat-l{font-size:12px;color:#888;margin-top:2px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 10px;font-size:11px;color:#888;font-weight:500;border-bottom:1px solid #f0ede6;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #f0ede6}
+tr:last-child td{border-bottom:none}
+.sync-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
+.sync-ok{background:#eaf3de;color:#3b6d11}
+.sync-err{background:#fcebeb;color:#a32d2d}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex-shrink:0}
+.empty{text-align:center;padding:2rem;color:#aaa;font-size:14px}
+.input-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
+.tag{display:inline-flex;align-items:center;gap:6px;background:#f0ede6;border-radius:20px;padding:5px 12px;font-size:13px;margin:4px}
+.del{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 4px;line-height:1}
+.offline-notice{background:#faeeda;color:#854f0b;padding:8px 14px;font-size:12px;text-align:center}
+</style>
+</head>
+<body>
+<div class="header">
+  <div>
+    <div class="header-title">Pointage Heures</div>
+    <div class="header-sub" id="header-date"></div>
+  </div>
+</div>
+<div id="offline-bar" class="offline-notice" style="display:none">Mode hors ligne — données sauvegardées localement</div>
+<div class="tabs">
+  <button class="tab active" onclick="showTab('saisie',this)">Saisie</button>
+  <button class="tab" onclick="showTab('journal',this)">Journal</button>
+  <button class="tab" onclick="showTab('synthese',this)">Synthèse</button>
+  <button class="tab" onclick="showTab('config',this)">Paramètres</button>
+</div>
+
+<div id="tab-saisie" class="section active">
+  <div id="sync-status"></div>
+  <div class="card">
+    <label>Ouvrier</label>
+    <select id="sel-ouvrier"></select>
+    <label>Date</label>
+    <input type="date" id="inp-date"/>
+    <label>Chantier</label>
+    <select id="sel-chantier"></select>
+    <label>Heures travaillées</label>
+    <input type="number" id="inp-heures" min="0.5" max="24" step="0.5" placeholder="ex : 7.5"/>
+    <label>Remarque (optionnel)</label>
+    <textarea id="inp-note" placeholder="Travaux effectués..."></textarea>
+    <button class="btn btn-primary" onclick="submitEntry()">Enregistrer</button>
+  </div>
+  <div id="today-list"></div>
+</div>
+
+<div id="tab-journal" class="section">
+  <div class="card" style="padding:12px">
+    <select id="f-ouvrier" onchange="renderJournal()" style="margin-bottom:8px"><option value="">Tous les ouvriers</option></select>
+    <select id="f-chantier" onchange="renderJournal()"><option value="">Tous les chantiers</option></select>
+  </div>
+  <div class="card" style="padding:0 16px" id="journal-list"></div>
+  <button class="btn btn-secondary" onclick="exportCSV()" style="margin-top:8px">Exporter CSV (Excel)</button>
+</div>
+
+<div id="tab-synthese" class="section">
+  <div class="card" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+    <div><label style="margin-top:0">Du</label><input type="date" id="s-from" onchange="renderSynthese()"/></div>
+    <div><label style="margin-top:0">Au</label><input type="date" id="s-to" onchange="renderSynthese()"/></div>
+  </div>
+  <div class="stat-grid" id="stat-cards"></div>
+  <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+    <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par ouvrier</div>
+    <table><thead><tr><th>Ouvrier</th><th>Heures</th><th>Jours</th></tr></thead><tbody id="body-ouvrier"></tbody></table>
+  </div>
+  <div class="card" style="padding:0;overflow:hidden">
+    <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par chantier</div>
+    <table><thead><tr><th>Chantier</th><th>Heures</th></tr></thead><tbody id="body-chantier"></tbody></table>
+  </div>
+</div>
+
+<div id="tab-config" class="section">
+  <div class="card">
+    <div style="font-weight:500;margin-bottom:12px">Ouvriers</div>
+    <div class="input-row">
+      <input type="text" id="new-ouvrier" placeholder="Prénom Nom"/>
+      <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addOuvrier()">+</button>
+    </div>
+    <div id="ouvrier-tags" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:500;margin-bottom:12px">Chantiers</div>
+    <div class="input-row">
+      <input type="text" id="new-chantier" placeholder="Nom du chantier"/>
+      <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addChantier()">+</button>
+    </div>
+    <div id="chantier-tags" style="margin-top:10px"></div>
+  </div>
+  <div class="card">
+    <div style="font-weight:500;margin-bottom:8px">Synchronisation</div>
+    <p style="font-size:13px;color:#888;margin-bottom:12px">Les données non synchronisées sont sauvegardées ici et envoyées dès que le réseau revient.</p>
+    <div id="pending-info" style="font-size:13px"></div>
+    <button class="btn btn-secondary" onclick="syncPending()" style="margin-top:10px">Synchroniser maintenant</button>
+  </div>
+</div>
+
+<script>
+const API_URL = "https://script.google.com/macros/s/AKfycby4yDcNb77gA7vSLIbV25UzkmyGJP43SrWerG5nY-yzJH7gs1Vc78E_Sy02qMdxF48DCw/exec";
+
+let appData = JSON.parse(localStorage.getItem('mn_data') || 'null') || {
+  ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
+  chantiers:['Résidence Les Chênes','Mairie de Versailles','Villa Beaumont','École primaire Nord'],
+  entrees:[],
+  pending:[]
+};
+
+function save(){ localStorage.setItem('mn_data', JSON.stringify(appData)); }
+function today(){ return new Date().toISOString().split('T')[0]; }
+function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
+
+function toast(msg, ok=true){
+  const el = document.getElementById('sync-status');
+  el.innerHTML = '<div class="sync-bar '+(ok?'sync-ok':'sync-err')+'"><div class="dot"></div>'+msg+'</div>';
+  setTimeout(()=>el.innerHTML='', 3000);
+}
+
+function populateSelects(){
+  ['sel-ouvrier','f-ouvrier'].forEach(id=>{
+    const s=document.getElementById(id), c=s.value;
+    s.innerHTML = id==='f-ouvrier'?'<option value="">Tous les ouvriers</option>':'';
+    appData.ouvriers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
+    if(c) s.value=c;
+  });
+  ['sel-chantier','f-chantier'].forEach(id=>{
+    const s=document.getElementById(id), c=s.value;
+    s.innerHTML = id==='f-chantier'?'<option value="">Tous les chantiers</option>':'';
+    appData.chantiers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
+    if(c) s.value=c;
+  });
+}
+
+async function submitEntry(){
+  const ouvrier=document.getElementById('sel-ouvrier').value;
+  const date=document.getElementById('inp-date').value;
+  const chantier=document.getElementById('sel-chantier').value;
+  const heures=parseFloat(document.getElementById('inp-heures').value);
+  const note=document.getElementById('inp-note').value.trim();
+  if(!ouvrier||!date||!chantier||!heures||heures<=0){ toast('Merci de remplir tous les champs',false); return; }
+  const entry={id:Date.now(),date,ouvrier,chantier,heures,note};
+  appData.entrees.unshift(entry);
+  save(); renderToday();
+  document.getElementById('inp-heures').value='';
+  document.getElementById('inp-note').value='';
+  const sent = await sendToSheet(entry);
+  if(!sent){ appData.pending.push(entry); save(); toast('Sauvegardé localement (hors ligne)',false); }
+  else{ toast('Enregistré dans Google Sheets !'); }
+  updatePendingInfo();
+}
+
+async function sendToSheet(entry){
+  try{
+    const r = await fetch(API_URL, {
+      method:'POST', body:JSON.stringify(entry),
+      headers:{'Content-Type':'application/json'}
+    });
+    const j = await r.json();
+    return j.success;
+  }catch(e){ return false; }
+}
+
+async function syncPending(){
+  if(!appData.pending.length){ toast('Aucune entrée en attente'); return; }
+  let ok=0;
+  for(const e of [...appData.pending]){
+    const sent=await sendToSheet(e);
+    if(sent){ appData.pending=appData.pending.filter(p=>p.id!==e.id); ok++; }
+  }
+  save(); updatePendingInfo();
+  toast(ok+' entrée(s) synchronisée(s)');
+}
+
+function updatePendingInfo(){
+  const n=appData.pending.length;
+  document.getElementById('pending-info').textContent = n>0 ? n+' entrée(s) en attente de synchronisation' : 'Tout est synchronisé.';
+}
+
+function renderToday(){
+  const t=today();
+  const list=appData.entrees.filter(e=>e.date===t);
+  const el=document.getElementById('today-list');
+  if(!list.length){ el.innerHTML=''; return; }
+  el.innerHTML='<div style="font-size:13px;font-weight:500;color:#888;margin:4px 0 8px">Saisies d\'aujourd\'hui</div>'+
+    '<div class="card" style="padding:0 16px">'+
+    list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge badge-h">${e.heures}h</span></div><div class="entry-detail">${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('')+
+    '</div>';
+}
+
+function renderJournal(){
+  const ov=document.getElementById('f-ouvrier').value;
+  const ch=document.getElementById('f-chantier').value;
+  const list=appData.entrees.filter(e=>(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
+  const el=document.getElementById('journal-list');
+  if(!list.length){ el.innerHTML='<div class="empty">Aucune entrée</div>'; return; }
+  el.innerHTML=list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge badge-h">${e.heures}h</span></div><div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('');
+}
+
+function getSynth(){
+  const df=document.getElementById('s-from').value;
+  const dt=document.getElementById('s-to').value;
+  return appData.entrees.filter(e=>(!df||e.date>=df)&&(!dt||e.date<=dt));
+}
+
+function renderSynthese(){
+  const list=getSynth();
+  const totalH=list.reduce((s,e)=>s+e.heures,0);
+  const jours=new Set(list.map(e=>e.date)).size;
+  document.getElementById('stat-cards').innerHTML=
+    `<div class="stat"><div class="stat-n">${totalH}h</div><div class="stat-l">Heures totales</div></div>
+     <div class="stat"><div class="stat-n">${jours}</div><div class="stat-l">Jours travaillés</div></div>`;
+  const byOv={};
+  list.forEach(e=>{ if(!byOv[e.ouvrier])byOv[e.ouvrier]={h:0,j:new Set()}; byOv[e.ouvrier].h+=e.heures; byOv[e.ouvrier].j.add(e.date); });
+  document.getElementById('body-ouvrier').innerHTML=
+    Object.entries(byOv).sort((a,b)=>b[1].h-a[1].h)
+    .map(([o,v])=>`<tr><td style="font-weight:500">${o}</td><td><span class="badge badge-h">${v.h}h</span></td><td>${v.j.size}</td></tr>`).join('')
+    ||'<tr><td colspan="3" class="empty">Aucune donnée</td></tr>';
+  const byCh={};
+  list.forEach(e=>{ if(!byCh[e.chantier])byCh[e.chantier]=0; byCh[e.chantier]+=e.heures; });
+  document.getElementById('body-chantier').innerHTML=
+    Object.entries(byCh).sort((a,b)=>b[1]-a[1])
+    .map(([c,h])=>`<tr><td style="font-weight:500">${c}</td><td><span class="badge badge-h">${h}h</span></td></tr>`).join('')
+    ||'<tr><td colspan="2" class="empty">Aucune donnée</td></tr>';
+}
+
+function renderConfig(){
+  document.getElementById('ouvrier-tags').innerHTML=appData.ouvriers.map((o,i)=>
+    `<span class="tag">${o}<button class="del" onclick="delOuvrier(${i})">×</button></span>`).join('');
+  document.getElementById('chantier-tags').innerHTML=appData.chantiers.map((c,i)=>
+    `<span class="tag">${c}<button class="del" onclick="delChantier(${i})">×</button></span>`).join('');
+}
+
+function addOuvrier(){ const v=document.getElementById('new-ouvrier').value.trim(); if(!v)return; appData.ouvriers.push(v); save(); document.getElementById('new-ouvrier').value=''; populateSelects(); renderConfig(); }
+function delOuvrier(i){ appData.ouvriers.splice(i,1); save(); populateSelects(); renderConfig(); }
+function addChantier(){ const v=document.getElementById('new-chantier').value.trim(); if(!v)return; appData.chantiers.push(v); save(); document.getElementById('new-chantier').value=''; populateSelects(); renderConfig(); }
+function delChantier(i){ appData.chantiers.splice(i,1); save(); populateSelects(); renderConfig(); }
+
+function exportCSV(){
+  const list=appData.entrees;
+  if(!list.length){ alert('Aucune donnée'); return; }
+  const rows=[['Date','Ouvrier','Chantier','Heures','Remarque']];
+  list.forEach(e=>rows.push([fmt(e.date),e.ouvrier,e.chantier,e.heures,e.note||'']));
+  const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
+  a.download='pointage.csv'; a.click();
+}
+
+function showTab(name, btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  btn.classList.add('active');
+  if(name==='journal') renderJournal();
+  if(name==='synthese') renderSynthese();
+  if(name==='config'){ renderConfig(); updatePendingInfo(); }
+}
+
+window.addEventListener('online', ()=>{ document.getElementById('offline-bar').style.display='none'; syncPending(); });
+window.addEventListener('offline', ()=>{ document.getElementById('offline-bar').style.display='block'; });
+if(!navigator.onLine) document.getElementById('offline-bar').style.display='block';
+
+document.getElementById('inp-date').value=today();
+document.getElementById('header-date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+const mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1);
+document.getElementById('s-from').value=mon.toISOString().split('T')[0];
+document.getElementById('s-to').value=today();
+populateSelects(); renderToday(); updatePendingInfo();
+</script>
+</body>
+</html>
