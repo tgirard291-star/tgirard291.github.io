@@ -253,10 +253,9 @@ async function load(){
 }
 
 async function submitEntry(){
-  const ouvrier = isAdmin ? null : currentUser;
-  if(!ouvrier && !isAdmin){showMsg('Veuillez vous connecter',false);return;}
+  const ouvrier = isAdmin ? 'Administrateur' : currentUser;
+  if(!ouvrier){showMsg('Veuillez vous connecter',false);return;}
   const date=document.getElementById('inp-date').value;
-  renderDayTotal(date);
   const chantier=document.getElementById('sel-chantier').value;
   const heures=parseFloat(document.getElementById('inp-heures').value);
   const note=document.getElementById('inp-note').value.trim();
