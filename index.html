@@ -111,9 +111,15 @@ tr:last-child td{border-bottom:none}
   </div>
 
   <div id="tab-synthese" class="section">
-    <div class="card" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <div><label style="margin-top:0">Du</label><input type="date" id="s-from" onchange="renderSynthese()"/></div>
-      <div><label style="margin-top:0">Au</label><input type="date" id="s-to" onchange="renderSynthese()"/></div>
+    <div class="card" style="padding:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+        <div><label style="margin-top:0">Du</label><input type="date" id="s-from" onchange="renderSynthese()"/></div>
+        <div><label style="margin-top:0">Au</label><input type="date" id="s-to" onchange="renderSynthese()"/></div>
+      </div>
+      <label>Salarié</label>
+      <select id="s-ouvrier" onchange="renderSynthese()" style="margin-bottom:8px"><option value="">Tous les salariés</option></select>
+      <label>Chantier</label>
+      <select id="s-chantier" onchange="renderSynthese()"><option value="">Tous les chantiers</option></select>
     </div>
     <div class="stat-grid" id="stat-cards"></div>
     <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
@@ -224,13 +230,13 @@ function showMsg(txt, ok){
 }
 
 function populateSelects(){
-  ['f-ouvrier'].forEach(id=>{
+  ['f-ouvrier','s-ouvrier'].forEach(id=>{
     const s=document.getElementById(id),c=s.value;
     s.innerHTML='<option value="">Tous les salariés</option>';
     cfg.ouvriers.forEach(o=>{const op=document.createElement('option');op.value=op.textContent=o;s.appendChild(op);});
     if(c)s.value=c;
   });
-  ['sel-chantier','f-chantier'].forEach(id=>{
+  ['sel-chantier','f-chantier','s-chantier'].forEach(id=>{
     const s=document.getElementById(id),c=s.value;
     s.innerHTML=id==='f-chantier'?'<option value="">Tous les chantiers</option>':'';
     cfg.chantiers.forEach(o=>{const op=document.createElement('option');op.value=op.textContent=o;s.appendChild(op);});
@@ -322,7 +328,9 @@ function renderJournal(){
 function getSynth(){
   const df=document.getElementById('s-from').value;
   const dt=document.getElementById('s-to').value;
-  return rows.filter(e=>(!df||e.date>=df)&&(!dt||e.date<=dt));
+  const ov=document.getElementById('s-ouvrier').value;
+  const ch=document.getElementById('s-chantier').value;
+  return rows.filter(e=>(!df||e.date>=df)&&(!dt||e.date<=dt)&&(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
 }
 
 function renderSynthese(){
