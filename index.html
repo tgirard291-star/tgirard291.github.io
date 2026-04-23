@@ -89,7 +89,7 @@ tr:last-child td{border-bottom:none}
     <div id="msg"></div>
     <div class="card">
       <label>Date</label>
-      <input type="date" id="inp-date"/>
+      <input type="date" id="inp-date" onchange="renderDayTotal(this.value)"/>
       <label>Chantier</label>
       <select id="sel-chantier"></select>
       <label>Heures travaillées</label>
@@ -256,6 +256,7 @@ async function submitEntry(){
   const ouvrier = isAdmin ? null : currentUser;
   if(!ouvrier && !isAdmin){showMsg('Veuillez vous connecter',false);return;}
   const date=document.getElementById('inp-date').value;
+  renderDayTotal(date);
   const chantier=document.getElementById('sel-chantier').value;
   const heures=parseFloat(document.getElementById('inp-heures').value);
   const note=document.getElementById('inp-note').value.trim();
