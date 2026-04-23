@@ -48,6 +48,11 @@ tr:last-child td{border-bottom:none}
 .tag{display:inline-flex;align-items:center;gap:6px;background:#f0ede6;border-radius:20px;padding:5px 12px;font-size:13px;margin:4px}
 .del{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 4px}
 .admin-bar{background:#2c2c2a;color:#f0ede6;padding:6px 16px;font-size:11px;text-align:center;letter-spacing:.5px}
+.login-screen{padding:2rem 16px;max-width:400px;margin:0 auto}
+.login-screen h2{font-size:18px;font-weight:500;margin-bottom:6px}
+.login-screen p{font-size:13px;color:#888;margin-bottom:1.5rem}
+.user-bar{background:#f0ede6;padding:8px 16px;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+.change-btn{font-size:12px;color:#888;background:none;border:none;cursor:pointer;text-decoration:underline}
 </style>
 </head>
 <body>
@@ -56,72 +61,88 @@ tr:last-child td{border-bottom:none}
   <div class="header-sub" id="header-date"></div>
 </div>
 <div id="admin-bar" class="admin-bar" style="display:none">MODE ADMINISTRATEUR</div>
-<div class="tabs">
-  <button class="tab active" onclick="showTab('saisie',this)">Saisie</button>
-  <button class="tab" id="btn-journal" onclick="showTab('journal',this)">Journal</button>
-  <button class="tab" id="btn-synthese" onclick="showTab('synthese',this)">Synthèse</button>
-  <button class="tab" onclick="showTab('config',this)">Paramètres</button>
+<div id="user-bar" class="user-bar" style="display:none">
+  <span id="user-bar-name"></span>
+  <button class="change-btn" onclick="logout()">Changer</button>
 </div>
 
-<div id="tab-saisie" class="section active">
-  <div id="msg"></div>
+<!-- Ecran de connexion -->
+<div id="login-screen" class="login-screen" style="display:none">
   <div class="card">
-    <label>Salarié</label>
-    <select id="sel-ouvrier"></select>
-    <label>Date</label>
-    <input type="date" id="inp-date"/>
-    <label>Chantier</label>
-    <select id="sel-chantier"></select>
-    <label>Heures travaillées</label>
-    <input type="number" id="inp-heures" min="0.5" max="24" step="0.5" placeholder="ex : 7.5"/>
-    <label>Remarque (optionnel)</label>
-    <textarea id="inp-note" placeholder="Travaux effectués..."></textarea>
-    <button class="btn btn-primary" onclick="submitEntry()">Enregistrer</button>
-  </div>
-  <div id="today-list"></div>
-</div>
-
-<div id="tab-journal" class="section">
-  <div class="card" style="padding:12px">
-    <select id="f-ouvrier" onchange="renderJournal()" style="margin-bottom:8px"><option value="">Tous les salariés</option></select>
-    <select id="f-chantier" onchange="renderJournal()"><option value="">Tous les chantiers</option></select>
-  </div>
-  <div class="card" style="padding:0 16px" id="journal-list"><div style="padding:1rem;color:#888;font-size:13px">Chargement...</div></div>
-  <button class="btn btn-secondary" onclick="exportCSV()">Exporter CSV (Excel)</button>
-</div>
-
-<div id="tab-synthese" class="section">
-  <div class="card" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
-    <div><label style="margin-top:0">Du</label><input type="date" id="s-from" onchange="renderSynthese()"/></div>
-    <div><label style="margin-top:0">Au</label><input type="date" id="s-to" onchange="renderSynthese()"/></div>
-  </div>
-  <div class="stat-grid" id="stat-cards"></div>
-  <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
-    <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par salarié</div>
-    <table><thead><tr><th>Salarié</th><th>Heures</th><th>Jours</th></tr></thead><tbody id="body-ouvrier"></tbody></table>
-  </div>
-  <div class="card" style="padding:0;overflow:hidden">
-    <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par chantier</div>
-    <table><thead><tr><th>Chantier</th><th>Heures</th></tr></thead><tbody id="body-chantier"></tbody></table>
+    <h2>Qui êtes-vous ?</h2>
+    <p>Sélectionnez votre nom pour continuer</p>
+    <label style="margin-top:0">Votre nom</label>
+    <select id="login-select"></select>
+    <button class="btn btn-primary" onclick="doLogin()">Continuer</button>
   </div>
 </div>
 
-<div id="tab-config" class="section">
-  <div class="card">
-    <div style="font-weight:500;margin-bottom:12px">Salariés</div>
-    <div class="input-row">
-      <input type="text" id="new-ouvrier" placeholder="Prénom Nom"/>
-      <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addOuvrier()">+</button>
+<div id="main-app" style="display:none">
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('saisie',this)">Saisie</button>
+    <button class="tab" id="btn-journal" onclick="showTab('journal',this)">Journal</button>
+    <button class="tab" id="btn-synthese" onclick="showTab('synthese',this)">Synthèse</button>
+    <button class="tab" onclick="showTab('config',this)">Paramètres</button>
+  </div>
+
+  <div id="tab-saisie" class="section active">
+    <div id="msg"></div>
+    <div class="card">
+      <label>Date</label>
+      <input type="date" id="inp-date"/>
+      <label>Chantier</label>
+      <select id="sel-chantier"></select>
+      <label>Heures travaillées</label>
+      <input type="number" id="inp-heures" min="0.5" max="24" step="0.5" placeholder="ex : 7.5"/>
+      <label>Remarque (optionnel)</label>
+      <textarea id="inp-note" placeholder="Travaux effectués..."></textarea>
+      <button class="btn btn-primary" onclick="submitEntry()">Enregistrer</button>
     </div>
-    <div id="ouvrier-tags" style="margin-top:10px"></div>
+    <div id="today-list"></div>
   </div>
-  <div class="card">
-    <div style="font-weight:500;margin-bottom:12px">Chantiers</div>
-    <div class="input-row">
-      <input type="text" id="new-chantier" placeholder="Nom du chantier"/>
-      <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addChantier()">+</button>
+
+  <div id="tab-journal" class="section">
+    <div class="card" style="padding:12px">
+      <select id="f-ouvrier" onchange="renderJournal()" style="margin-bottom:8px"><option value="">Tous les salariés</option></select>
+      <select id="f-chantier" onchange="renderJournal()"><option value="">Tous les chantiers</option></select>
     </div>
-    <div id="chantier-tags" style="margin-top:10px"></div>
+    <div class="card" style="padding:0 16px" id="journal-list"><div style="padding:1rem;color:#888;font-size:13px">Chargement...</div></div>
+    <button class="btn btn-secondary" onclick="exportCSV()">Exporter CSV (Excel)</button>
+  </div>
+
+  <div id="tab-synthese" class="section">
+    <div class="card" style="padding:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div><label style="margin-top:0">Du</label><input type="date" id="s-from" onchange="renderSynthese()"/></div>
+      <div><label style="margin-top:0">Au</label><input type="date" id="s-to" onchange="renderSynthese()"/></div>
+    </div>
+    <div class="stat-grid" id="stat-cards"></div>
+    <div class="card" style="padding:0;overflow:hidden;margin-bottom:12px">
+      <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par salarié</div>
+      <table><thead><tr><th>Salarié</th><th>Heures</th><th>Jours</th></tr></thead><tbody id="body-ouvrier"></tbody></table>
+    </div>
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="padding:12px 14px 8px;font-size:13px;font-weight:500;border-bottom:1px solid #f0ede6">Par chantier</div>
+      <table><thead><tr><th>Chantier</th><th>Heures</th></tr></thead><tbody id="body-chantier"></tbody></table>
+    </div>
+  </div>
+
+  <div id="tab-config" class="section">
+    <div class="card">
+      <div style="font-weight:500;margin-bottom:12px">Salariés</div>
+      <div class="input-row">
+        <input type="text" id="new-ouvrier" placeholder="Prénom Nom"/>
+        <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addOuvrier()">+</button>
+      </div>
+      <div id="ouvrier-tags" style="margin-top:10px"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:500;margin-bottom:12px">Chantiers</div>
+      <div class="input-row">
+        <input type="text" id="new-chantier" placeholder="Nom du chantier"/>
+        <button class="btn btn-primary" style="width:auto;margin-top:0;padding:10px 16px" onclick="addChantier()">+</button>
+      </div>
+      <div id="chantier-tags" style="margin-top:10px"></div>
+    </div>
   </div>
 </div>
 
@@ -135,19 +156,65 @@ let cfg = JSON.parse(localStorage.getItem('mn_cfg')||'null') || {
   ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
   chantiers:['Residence Les Chenes','Mairie de Versailles','Villa Beaumont','Ecole primaire Nord']
 };
+let currentUser = localStorage.getItem('mn_user') || null;
 let rows = [];
 
 function saveCfg(){ localStorage.setItem('mn_cfg', JSON.stringify(cfg)); }
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
 
-function initMode(){
+function init(){
+  document.getElementById('header-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
+  const mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1);
+  document.getElementById('s-from').value=mon.toISOString().split('T')[0];
+  document.getElementById('s-to').value=today();
+
   if(isAdmin){
     document.getElementById('admin-bar').style.display='block';
+    showApp();
   } else {
     document.getElementById('btn-journal').style.display='none';
     document.getElementById('btn-synthese').style.display='none';
+    if(currentUser){
+      showApp();
+    } else {
+      showLogin();
+    }
   }
+}
+
+function showLogin(){
+  document.getElementById('login-screen').style.display='block';
+  document.getElementById('main-app').style.display='none';
+  document.getElementById('user-bar').style.display='none';
+  const sel = document.getElementById('login-select');
+  sel.innerHTML = '<option value="">-- Sélectionnez votre nom --</option>';
+  cfg.ouvriers.forEach(o=>{const op=document.createElement('option');op.value=op.textContent=o;sel.appendChild(op);});
+}
+
+function doLogin(){
+  const v = document.getElementById('login-select').value;
+  if(!v) return;
+  currentUser = v;
+  localStorage.setItem('mn_user', v);
+  showApp();
+}
+
+function logout(){
+  currentUser = null;
+  localStorage.removeItem('mn_user');
+  showLogin();
+}
+
+function showApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('main-app').style.display='block';
+  if(!isAdmin && currentUser){
+    document.getElementById('user-bar').style.display='flex';
+    document.getElementById('user-bar-name').textContent = 'Connecté : ' + currentUser;
+  }
+  populateSelects();
+  load().then(()=>renderToday());
 }
 
 function showMsg(txt, ok){
@@ -157,9 +224,9 @@ function showMsg(txt, ok){
 }
 
 function populateSelects(){
-  ['sel-ouvrier','f-ouvrier'].forEach(id=>{
+  ['f-ouvrier'].forEach(id=>{
     const s=document.getElementById(id),c=s.value;
-    s.innerHTML=id==='f-ouvrier'?'<option value="">Tous les salariés</option>':'';
+    s.innerHTML='<option value="">Tous les salariés</option>';
     cfg.ouvriers.forEach(o=>{const op=document.createElement('option');op.value=op.textContent=o;s.appendChild(op);});
     if(c)s.value=c;
   });
@@ -180,12 +247,13 @@ async function load(){
 }
 
 async function submitEntry(){
-  const ouvrier=document.getElementById('sel-ouvrier').value;
+  const ouvrier = isAdmin ? null : currentUser;
+  if(!ouvrier && !isAdmin){showMsg('Veuillez vous connecter',false);return;}
   const date=document.getElementById('inp-date').value;
   const chantier=document.getElementById('sel-chantier').value;
   const heures=parseFloat(document.getElementById('inp-heures').value);
   const note=document.getElementById('inp-note').value.trim();
-  if(!ouvrier||!date||!chantier||!heures||heures<=0){showMsg('Merci de remplir tous les champs',false);return;}
+  if(!date||!chantier||!heures||heures<=0){showMsg('Merci de remplir tous les champs',false);return;}
   try{
     const r=await fetch(URL_BASE,{
       method:'POST',
@@ -195,6 +263,7 @@ async function submitEntry(){
     if(r.ok||r.status===201){
       document.getElementById('inp-heures').value='';
       document.getElementById('inp-note').value='';
+      document.getElementById('inp-date').value=today();
       showMsg('Enregistré !',true);
       await load();
       renderToday();
@@ -205,7 +274,8 @@ async function submitEntry(){
   }catch(e){showMsg('Erreur de connexion',false);}
 }
 
-async function deleteEntry(id){
+async function deleteEntry(id, owner){
+  if(!isAdmin && owner !== currentUser){showMsg('Vous ne pouvez supprimer que vos propres saisies',false);return;}
   if(!confirm('Supprimer cette saisie ?')) return;
   try{
     const r=await fetch(URL_BASE+'?id=eq.'+id,{method:'DELETE',headers:H});
@@ -220,12 +290,19 @@ async function deleteEntry(id){
 
 function renderToday(){
   const t=today();
-  const list=rows.filter(e=>e.date===t);
+  const list = isAdmin
+    ? rows.filter(e=>e.date===t)
+    : rows.filter(e=>e.date===t && e.ouvrier===currentUser);
   const el=document.getElementById('today-list');
   if(!list.length){el.innerHTML='';return;}
   el.innerHTML='<div style="font-size:13px;font-weight:500;color:#888;margin:4px 0 8px">Saisies d\'aujourd\'hui</div>'+
     '<div class="card" style="padding:0 16px">'+
-    list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge-h">${e.heures}h</span><button class="del-btn" onclick="deleteEntry(${e.id})">×</button></div><div class="entry-detail">${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('')+
+    list.map(e=>`<div class="entry"><div class="entry-top">
+      ${isAdmin?`<span class="entry-name">${e.ouvrier}</span>`:''}
+      <span class="badge-h">${e.heures}h</span>
+      <span style="font-size:13px;flex:1;color:#444">${e.chantier}</span>
+      <button class="del-btn" onclick="deleteEntry(${e.id},'${e.ouvrier}')">×</button>
+    </div><div class="entry-detail">${e.note||''}</div></div>`).join('')+
     '</div>';
 }
 
@@ -235,7 +312,11 @@ function renderJournal(){
   const list=rows.filter(e=>(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
   const el=document.getElementById('journal-list');
   if(!list.length){el.innerHTML='<div class="empty">Aucune entrée</div>';return;}
-  el.innerHTML=list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge-h">${e.heures}h</span><button class="del-btn" onclick="deleteEntry(${e.id})">×</button></div><div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('');
+  el.innerHTML=list.map(e=>`<div class="entry"><div class="entry-top">
+    <span class="entry-name">${e.ouvrier}</span>
+    <span class="badge-h">${e.heures}h</span>
+    <button class="del-btn" onclick="deleteEntry(${e.id},'${e.ouvrier}')">×</button>
+  </div><div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('');
 }
 
 function getSynth(){
@@ -300,13 +381,7 @@ async function showTab(name,btn){
 }
 
 document.getElementById('inp-date').value=today();
-document.getElementById('header-date').textContent=new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
-const mon=new Date();mon.setDate(mon.getDate()-mon.getDay()+1);
-document.getElementById('s-from').value=mon.toISOString().split('T')[0];
-document.getElementById('s-to').value=today();
-initMode();
-populateSelects();
-load().then(()=>renderToday());
+init();
 </script>
 </body>
 </html>
