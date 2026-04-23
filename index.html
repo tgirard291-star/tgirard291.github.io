@@ -165,23 +165,41 @@ const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZi
 const H = {"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY};
 const isAdmin = window.location.search.includes('admin');
 
-let cfg = JSON.parse(localStorage.getItem('mn_cfg')||'null') || {
-  ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
-  chantiers:['Residence Les Chenes','Mairie de Versailles','Villa Beaumont','Ecole primaire Nord']
-};
+let cfg = { ouvriers:[], chantiers:[] };
 let currentUser = null;
 let rows = [];
 
-function saveCfg(){ localStorage.setItem('mn_cfg', JSON.stringify(cfg)); }
+async function loadCfg(){
+  try{
+    const r = await fetch("https://xxosvhsuuezkhemkmiga.supabase.co/rest/v1/config?select=*", {headers:H});
+    const json = await r.json();
+    if(Array.isArray(json)){
+      json.forEach(row => {
+        if(row.cle==='ouvriers') cfg.ouvriers = JSON.parse(row.valeur);
+        if(row.cle==='chantiers') cfg.chantiers = JSON.parse(row.valeur);
+      });
+    }
+  }catch(e){}
+}
+
+async function saveCfg(cle){
+  const valeur = JSON.stringify(cfg[cle]);
+  await fetch("https://xxosvhsuuezkhemkmiga.supabase.co/rest/v1/config?cle=eq."+cle, {
+    method:'PATCH',
+    headers:{...H,'Prefer':'return=minimal'},
+    body: JSON.stringify({valeur})
+  });
+}
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
 
-function init(){
+async function init(){
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   const mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1);
   document.getElementById('s-from').value = mon.toISOString().split('T')[0];
   document.getElementById('s-to').value = today();
   document.getElementById('inp-date').value = today();
+  await loadCfg();
   if(isAdmin){
     document.getElementById('admin-bar').style.display='block';
     currentUser = 'Admin';
@@ -371,10 +389,10 @@ function renderConfig(){
     `<span class="tag">${c}<button class="del" onclick="delChantier(${i})">×</button></span>`).join('');
 }
 
-function addOuvrier(){const v=document.getElementById('new-ouvrier').value.trim();if(!v)return;cfg.ouvriers.push(v);saveCfg();document.getElementById('new-ouvrier').value='';populateSelects();renderConfig();}
-function delOuvrier(i){cfg.ouvriers.splice(i,1);saveCfg();populateSelects();renderConfig();}
-function addChantier(){const v=document.getElementById('new-chantier').value.trim();if(!v)return;cfg.chantiers.push(v);saveCfg();document.getElementById('new-chantier').value='';populateSelects();renderConfig();}
-function delChantier(i){cfg.chantiers.splice(i,1);saveCfg();populateSelects();renderConfig();}
+async function addOuvrier(){const v=document.getElementById('new-ouvrier').value.trim();if(!v)return;cfg.ouvriers.push(v);await saveCfg('ouvriers');document.getElementById('new-ouvrier').value='';populateSelects();renderConfig();}
+async function delOuvrier(i){cfg.ouvriers.splice(i,1);await saveCfg('ouvriers');populateSelects();renderConfig();}
+async function addChantier(){const v=document.getElementById('new-chantier').value.trim();if(!v)return;cfg.chantiers.push(v);await saveCfg('chantiers');document.getElementById('new-chantier').value='';populateSelects();renderConfig();}
+async function delChantier(i){cfg.chantiers.splice(i,1);await saveCfg('chantiers');populateSelects();renderConfig();}
 
 function exportCSV(){
   if(!rows.length){alert('Aucune donnée');return;}
