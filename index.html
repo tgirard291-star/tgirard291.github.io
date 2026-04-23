@@ -177,8 +177,8 @@ function init(){
 
   if(isAdmin){
     document.getElementById('admin-bar').style.display='block';
-    showApp();
-  } else {
+  }
+  {
     document.getElementById('btn-journal').style.display='none';
     if(currentUser){
       showApp();
@@ -253,7 +253,7 @@ async function load(){
 }
 
 async function submitEntry(){
-  const ouvrier = isAdmin ? 'Administrateur' : currentUser;
+  const ouvrier = currentUser || 'Admin';
   if(!ouvrier){showMsg('Veuillez vous connecter',false);return;}
   const date=document.getElementById('inp-date').value;
   const chantier=document.getElementById('sel-chantier').value;
