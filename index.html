@@ -25,14 +25,17 @@ textarea{min-height:70px;resize:vertical}
 .btn{display:inline-flex;align-items:center;justify-content:center;padding:12px 20px;font-size:15px;border-radius:10px;cursor:pointer;font-family:inherit;border:none;font-weight:500;width:100%;margin-top:14px}
 .btn-primary{background:#2c2c2a;color:#fff}
 .btn-secondary{background:#f0ede6;color:#2c2c2a;margin-top:8px}
+.btn-danger{background:#fcebeb;color:#a32d2d;margin-top:8px}
 .badge-h{background:#eaf3de;color:#3b6d11;display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
 .msg-ok{background:#eaf3de;color:#3b6d11;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
 .msg-err{background:#fcebeb;color:#a32d2d;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
-.entry{padding:12px 0;border-bottom:1px solid #f0ede6;display:flex;flex-direction:column;gap:4px}
+.entry{padding:12px 0;border-bottom:1px solid #f0ede6}
 .entry:last-child{border-bottom:none}
-.entry-top{display:flex;align-items:center;justify-content:space-between}
+.entry-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
 .entry-name{font-weight:600;font-size:14px}
-.entry-detail{font-size:13px;color:#888}
+.entry-detail{font-size:13px;color:#888;margin-top:3px}
+.del-btn{background:none;border:none;color:#ccc;font-size:20px;cursor:pointer;padding:0 4px;flex-shrink:0}
+.del-btn:active{color:#a32d2d}
 .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
 .stat{background:#fff;border-radius:10px;padding:14px;text-align:center}
 .stat-n{font-size:26px;font-weight:600}
@@ -45,6 +48,7 @@ tr:last-child td{border-bottom:none}
 .input-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .tag{display:inline-flex;align-items:center;gap:6px;background:#f0ede6;border-radius:20px;padding:5px 12px;font-size:13px;margin:4px}
 .del{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 4px}
+.mode-banner{background:#f0ede6;color:#2c2c2a;padding:8px 16px;font-size:12px;text-align:center}
 </style>
 </head>
 <body>
@@ -52,11 +56,12 @@ tr:last-child td{border-bottom:none}
   <div class="header-title">Pointage Heures</div>
   <div class="header-sub" id="header-date"></div>
 </div>
-<div class="tabs">
+<div id="mode-banner" class="mode-banner"></div>
+<div class="tabs" id="tabs">
   <button class="tab active" onclick="showTab('saisie',this)">Saisie</button>
-  <button class="tab" onclick="showTab('journal',this)">Journal</button>
-  <button class="tab" onclick="showTab('synthese',this)">Synthèse</button>
-  <button class="tab" onclick="showTab('config',this)">Paramètres</button>
+  <button class="tab" id="tab-journal-btn" onclick="showTab('journal',this)">Journal</button>
+  <button class="tab" id="tab-synthese-btn" onclick="showTab('synthese',this)">Synthèse</button>
+  <button class="tab" id="tab-config-btn" onclick="showTab('config',this)">Paramètres</button>
 </div>
 
 <div id="tab-saisie" class="section active">
@@ -126,6 +131,10 @@ const URL_BASE = "https://xxosvhsuuezkhemkmiga.supabase.co/rest/v1/pointage";
 const KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b3N2aHN1dWV6a2hlbWttaWdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4ODc3NzIsImV4cCI6MjA5MjQ2Mzc3Mn0.uaO8PMZxBd9-uuytO5rgE-j0kN6uwtMIBDeTnZk8j9w";
 const H = {"Content-Type":"application/json","apikey":KEY,"Authorization":"Bearer "+KEY};
 
+// Mode : "ouvrier" ou "admin"
+// Ajoute ?admin à l'URL pour le mode admin
+const isAdmin = window.location.search.includes('admin');
+
 let cfg = JSON.parse(localStorage.getItem('mn_cfg')||'null') || {
   ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
   chantiers:['Residence Les Chenes','Mairie de Versailles','Villa Beaumont','Ecole primaire Nord']
@@ -135,6 +144,17 @@ let rows = [];
 function saveCfg(){ localStorage.setItem('mn_cfg', JSON.stringify(cfg)); }
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
+
+function initMode(){
+  if(isAdmin){
+    document.getElementById('mode-banner').textContent = 'Mode administrateur';
+  } else {
+    document.getElementById('mode-banner').textContent = 'Mode ouvrier — saisie uniquement';
+    document.getElementById('tab-journal-btn').style.display='none';
+    document.getElementById('tab-synthese-btn').style.display='none';
+    document.getElementById('tab-config-btn').style.display='none';
+  }
+}
 
 function showMsg(txt, ok){
   const el=document.getElementById('msg');
@@ -191,6 +211,18 @@ async function submitEntry(){
   }catch(e){showMsg('Erreur de connexion',false);}
 }
 
+async function deleteEntry(id){
+  if(!confirm('Supprimer cette saisie ?')) return;
+  try{
+    const r=await fetch(URL_BASE+'?id=eq.'+id,{method:'DELETE',headers:H});
+    if(r.ok){
+      showMsg('Saisie supprimée',true);
+      await load();
+      renderToday();
+    }
+  }catch(e){showMsg('Erreur de suppression',false);}
+}
+
 function renderToday(){
   const t=today();
   const list=rows.filter(e=>e.date===t);
@@ -198,7 +230,15 @@ function renderToday(){
   if(!list.length){el.innerHTML='';return;}
   el.innerHTML='<div style="font-size:13px;font-weight:500;color:#888;margin:4px 0 8px">Saisies d\'aujourd\'hui</div>'+
     '<div class="card" style="padding:0 16px">'+
-    list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge-h">${e.heures}h</span></div><div class="entry-detail">${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('')+
+    list.map(e=>`
+      <div class="entry">
+        <div class="entry-top">
+          <span class="entry-name">${e.ouvrier}</span>
+          <span class="badge-h">${e.heures}h</span>
+          <button class="del-btn" onclick="deleteEntry(${e.id})" title="Supprimer">×</button>
+        </div>
+        <div class="entry-detail">${e.chantier}${e.note?' — '+e.note:''}</div>
+      </div>`).join('')+
     '</div>';
 }
 
@@ -208,7 +248,15 @@ function renderJournal(){
   const list=rows.filter(e=>(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
   const el=document.getElementById('journal-list');
   if(!list.length){el.innerHTML='<div class="empty">Aucune entrée</div>';return;}
-  el.innerHTML=list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge-h">${e.heures}h</span></div><div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('');
+  el.innerHTML=list.map(e=>`
+    <div class="entry">
+      <div class="entry-top">
+        <span class="entry-name">${e.ouvrier}</span>
+        <span class="badge-h">${e.heures}h</span>
+        <button class="del-btn" onclick="deleteEntry(${e.id})" title="Supprimer">×</button>
+      </div>
+      <div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div>
+    </div>`).join('');
 }
 
 function getSynth(){
@@ -277,6 +325,7 @@ document.getElementById('header-date').textContent=new Date().toLocaleDateString
 const mon=new Date();mon.setDate(mon.getDate()-mon.getDay()+1);
 document.getElementById('s-from').value=mon.toISOString().split('T')[0];
 document.getElementById('s-to').value=today();
+initMode();
 populateSelects();
 load().then(()=>renderToday());
 </script>
