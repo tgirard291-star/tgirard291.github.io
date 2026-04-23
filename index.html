@@ -194,6 +194,7 @@ function today(){ return new Date().toISOString().split('T')[0]; }
 function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
 
 async function init(){
+  localStorage.removeItem('mn_cfg');
   document.getElementById('header-date').textContent = new Date().toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'});
   const mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1);
   document.getElementById('s-from').value = mon.toISOString().split('T')[0];
