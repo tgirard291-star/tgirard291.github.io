@@ -182,8 +182,13 @@ function init(){
   document.getElementById('s-from').value = mon.toISOString().split('T')[0];
   document.getElementById('s-to').value = today();
   document.getElementById('inp-date').value = today();
-  if(isAdmin) document.getElementById('admin-bar').style.display='block';
-  showLogin();
+  if(isAdmin){
+    document.getElementById('admin-bar').style.display='block';
+    currentUser = 'Admin';
+    showApp();
+  } else {
+    showLogin();
+  }
 }
 
 function showLogin(){
