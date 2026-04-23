@@ -27,7 +27,8 @@ select:focus,input:focus,textarea:focus{outline:none;border-color:#2c2c2a}
 .btn-primary{background:#2c2c2a;color:#fff}
 .btn-secondary{background:#f0ede6;color:#2c2c2a;margin-top:8px}
 .badge-h{background:#eaf3de;color:#3b6d11;display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:500}
-.ok{background:#eaf3de;color:#3b6d11;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
+.msg-ok{background:#eaf3de;color:#3b6d11;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
+.msg-err{background:#fcebeb;color:#a32d2d;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:12px}
 .entry{padding:12px 0;border-bottom:1px solid #f0ede6;display:flex;flex-direction:column;gap:4px}
 .entry:last-child{border-bottom:none}
 .entry-top{display:flex;align-items:center;justify-content:space-between}
@@ -45,6 +46,7 @@ tr:last-child td{border-bottom:none}
 .input-row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end}
 .tag{display:inline-flex;align-items:center;gap:6px;background:#f0ede6;border-radius:20px;padding:5px 12px;font-size:13px;margin:4px}
 .del{background:none;border:none;color:#ccc;font-size:18px;cursor:pointer;padding:0 4px}
+.loading{text-align:center;padding:1rem;color:#888;font-size:13px}
 </style>
 </head>
 <body>
@@ -82,7 +84,7 @@ tr:last-child td{border-bottom:none}
     <select id="f-ouvrier" onchange="renderJournal()" style="margin-bottom:8px"><option value="">Tous les ouvriers</option></select>
     <select id="f-chantier" onchange="renderJournal()"><option value="">Tous les chantiers</option></select>
   </div>
-  <div class="card" style="padding:0 16px" id="journal-list"></div>
+  <div class="card" style="padding:0 16px" id="journal-list"><div class="loading">Chargement...</div></div>
   <button class="btn btn-secondary" onclick="exportCSV()">Exporter CSV (Excel)</button>
 </div>
 
@@ -122,54 +124,76 @@ tr:last-child td{border-bottom:none}
 </div>
 
 <script>
-let appData = JSON.parse(localStorage.getItem('mn_data') || 'null') || {
-  ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
-  chantiers:['Résidence Les Chênes','Mairie de Versailles','Villa Beaumont','École primaire Nord'],
-  entrees:[]
-};
+const SUPA_URL = "https://xxosvhsuuezkhemkmiga.supabase.co";
+const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4b3N2aHN1dWV6a2hlbWttaWdhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4ODc3NzIsImV4cCI6MjA5MjQ2Mzc3Mn0.uaO8PMZxBd9-uuytO5rgE-j0kN6uwtMIBDeTnZk8j9w";
+const HEADERS = { "Content-Type": "application/json", "apikey": SUPA_KEY, "Authorization": "Bearer " + SUPA_KEY };
 
-function save(){ localStorage.setItem('mn_data', JSON.stringify(appData)); }
+let cfg = JSON.parse(localStorage.getItem('mn_cfg') || 'null') || {
+  ouvriers:['Martin Dupont','Lucas Bernard','Thomas Leroy','Julien Moreau','Antoine Simon'],
+  chantiers:['Résidence Les Chênes','Mairie de Versailles','Villa Beaumont','École primaire Nord']
+};
+let allEntrees = [];
+
+function saveCfg(){ localStorage.setItem('mn_cfg', JSON.stringify(cfg)); }
 function today(){ return new Date().toISOString().split('T')[0]; }
 function fmt(d){ if(!d)return''; const [y,m,j]=d.split('-'); return j+'/'+m+'/'+y; }
 
-function showMsg(msg){
+function showMsg(msg, ok=true){
   const el=document.getElementById('msg');
-  el.innerHTML='<div class="ok">'+msg+'</div>';
-  setTimeout(()=>el.innerHTML='', 2500);
+  el.innerHTML='<div class="'+(ok?'msg-ok':'msg-err')+'">'+msg+'</div>';
+  setTimeout(()=>el.innerHTML='', 3000);
 }
 
 function populateSelects(){
   ['sel-ouvrier','f-ouvrier'].forEach(id=>{
     const s=document.getElementById(id), c=s.value;
     s.innerHTML=id==='f-ouvrier'?'<option value="">Tous les ouvriers</option>':'';
-    appData.ouvriers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
+    cfg.ouvriers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
     if(c) s.value=c;
   });
   ['sel-chantier','f-chantier'].forEach(id=>{
     const s=document.getElementById(id), c=s.value;
     s.innerHTML=id==='f-chantier'?'<option value="">Tous les chantiers</option>':'';
-    appData.chantiers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
+    cfg.chantiers.forEach(o=>{ const op=document.createElement('option'); op.value=op.textContent=o; s.appendChild(op); });
     if(c) s.value=c;
   });
 }
 
-function submitEntry(){
+async function submitEntry(){
   const ouvrier=document.getElementById('sel-ouvrier').value;
   const date=document.getElementById('inp-date').value;
   const chantier=document.getElementById('sel-chantier').value;
   const heures=parseFloat(document.getElementById('inp-heures').value);
   const note=document.getElementById('inp-note').value.trim();
-  if(!ouvrier||!date||!chantier||!heures||heures<=0){ showMsg('Merci de remplir tous les champs'); return; }
-  appData.entrees.unshift({id:Date.now(),date,ouvrier,chantier,heures,note});
-  save(); renderToday();
-  document.getElementById('inp-heures').value='';
-  document.getElementById('inp-note').value='';
-  showMsg('Saisie enregistrée !');
+  if(!ouvrier||!date||!chantier||!heures||heures<=0){ showMsg('Merci de remplir tous les champs',false); return; }
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/pointage', {
+      method:'POST',
+      headers:{...HEADERS, 'Prefer':'return=minimal'},
+      body: JSON.stringify({date,ouvrier,chantier,heures,note})
+    });
+    if(r.ok){
+      document.getElementById('inp-heures').value='';
+      document.getElementById('inp-note').value='';
+      showMsg('Enregistré !');
+      await loadEntrees();
+      renderToday();
+    } else {
+      showMsg('Erreur lors de l\'enregistrement',false);
+    }
+  } catch(e){ showMsg('Erreur de connexion',false); }
+}
+
+async function loadEntrees(){
+  try {
+    const r = await fetch(SUPA_URL+'/rest/v1/pointage?select=*&order=date.desc,id.desc', { headers: HEADERS });
+    allEntrees = await r.json();
+  } catch(e){ allEntrees=[]; }
 }
 
 function renderToday(){
   const t=today();
-  const list=appData.entrees.filter(e=>e.date===t);
+  const list=allEntrees.filter(e=>e.date===t);
   const el=document.getElementById('today-list');
   if(!list.length){ el.innerHTML=''; return; }
   el.innerHTML='<div style="font-size:13px;font-weight:500;color:#888;margin:4px 0 8px">Saisies d\'aujourd\'hui</div>'+
@@ -181,7 +205,7 @@ function renderToday(){
 function renderJournal(){
   const ov=document.getElementById('f-ouvrier').value;
   const ch=document.getElementById('f-chantier').value;
-  const list=appData.entrees.filter(e=>(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
+  const list=allEntrees.filter(e=>(!ov||e.ouvrier===ov)&&(!ch||e.chantier===ch));
   const el=document.getElementById('journal-list');
   if(!list.length){ el.innerHTML='<div class="empty">Aucune entrée</div>'; return; }
   el.innerHTML=list.map(e=>`<div class="entry"><div class="entry-top"><span class="entry-name">${e.ouvrier}</span><span class="badge-h">${e.heures}h</span></div><div class="entry-detail">${fmt(e.date)} — ${e.chantier}${e.note?' — '+e.note:''}</div></div>`).join('');
@@ -190,7 +214,7 @@ function renderJournal(){
 function getSynth(){
   const df=document.getElementById('s-from').value;
   const dt=document.getElementById('s-to').value;
-  return appData.entrees.filter(e=>(!df||e.date>=df)&&(!dt||e.date<=dt));
+  return allEntrees.filter(e=>(!df||e.date>=df)&&(!dt||e.date<=dt));
 }
 
 function renderSynthese(){
@@ -215,36 +239,37 @@ function renderSynthese(){
 }
 
 function renderConfig(){
-  document.getElementById('ouvrier-tags').innerHTML=appData.ouvriers.map((o,i)=>
+  document.getElementById('ouvrier-tags').innerHTML=cfg.ouvriers.map((o,i)=>
     `<span class="tag">${o}<button class="del" onclick="delOuvrier(${i})">×</button></span>`).join('');
-  document.getElementById('chantier-tags').innerHTML=appData.chantiers.map((c,i)=>
+  document.getElementById('chantier-tags').innerHTML=cfg.chantiers.map((c,i)=>
     `<span class="tag">${c}<button class="del" onclick="delChantier(${i})">×</button></span>`).join('');
 }
 
-function addOuvrier(){ const v=document.getElementById('new-ouvrier').value.trim(); if(!v)return; appData.ouvriers.push(v); save(); document.getElementById('new-ouvrier').value=''; populateSelects(); renderConfig(); }
-function delOuvrier(i){ appData.ouvriers.splice(i,1); save(); populateSelects(); renderConfig(); }
-function addChantier(){ const v=document.getElementById('new-chantier').value.trim(); if(!v)return; appData.chantiers.push(v); save(); document.getElementById('new-chantier').value=''; populateSelects(); renderConfig(); }
-function delChantier(i){ appData.chantiers.splice(i,1); save(); populateSelects(); renderConfig(); }
+function addOuvrier(){ const v=document.getElementById('new-ouvrier').value.trim(); if(!v)return; cfg.ouvriers.push(v); saveCfg(); document.getElementById('new-ouvrier').value=''; populateSelects(); renderConfig(); }
+function delOuvrier(i){ cfg.ouvriers.splice(i,1); saveCfg(); populateSelects(); renderConfig(); }
+function addChantier(){ const v=document.getElementById('new-chantier').value.trim(); if(!v)return; cfg.chantiers.push(v); saveCfg(); document.getElementById('new-chantier').value=''; populateSelects(); renderConfig(); }
+function delChantier(i){ cfg.chantiers.splice(i,1); saveCfg(); populateSelects(); renderConfig(); }
 
 function exportCSV(){
-  const list=appData.entrees;
-  if(!list.length){ alert('Aucune donnée à exporter'); return; }
+  if(!allEntrees.length){ alert('Aucune donnée à exporter'); return; }
   const rows=[['Date','Ouvrier','Chantier','Heures','Remarque']];
-  list.forEach(e=>rows.push([fmt(e.date),e.ouvrier,e.chantier,e.heures,e.note||'']));
+  allEntrees.forEach(e=>rows.push([fmt(e.date),e.ouvrier,e.chantier,e.heures,e.note||'']));
   const csv=rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
   a.download='pointage.csv'; a.click();
 }
 
-function showTab(name,btn){
+async function showTab(name,btn){
   document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+name).classList.add('active');
   btn.classList.add('active');
+  await loadEntrees();
   if(name==='journal') renderJournal();
   if(name==='synthese') renderSynthese();
   if(name==='config') renderConfig();
+  if(name==='saisie') renderToday();
 }
 
 document.getElementById('inp-date').value=today();
@@ -252,7 +277,8 @@ document.getElementById('header-date').textContent=new Date().toLocaleDateString
 const mon=new Date(); mon.setDate(mon.getDate()-mon.getDay()+1);
 document.getElementById('s-from').value=mon.toISOString().split('T')[0];
 document.getElementById('s-to').value=today();
-populateSelects(); renderToday();
+populateSelects();
+loadEntrees().then(()=>renderToday());
 </script>
 </body>
 </html>
