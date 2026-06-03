@@ -398,7 +398,7 @@ async function delChantier(i){cfg.chantiers.splice(i,1);await saveCfg('chantiers
 function exportCSV(){
   if(!rows.length){alert('Aucune donnée');return;}
   const r=[['Date','Salarié','Chantier','Heures','Remarque']];
-  rows.forEach(e=>r.push([fmt(e.date),e.ouvrier,e.chantier,e.heures,e.note||'']));
+  rows.forEach(e=>r.push([fmt(e.date),e.ouvrier,e.chantier,String(e.heures).replace('.',','),e.note||'']));
   const csv=r.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\n');
   const a=document.createElement('a');
   a.href='data:text/csv;charset=utf-8,\uFEFF'+encodeURIComponent(csv);
