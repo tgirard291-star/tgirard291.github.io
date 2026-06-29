@@ -392,7 +392,7 @@ function renderConfig(){
 
 async function addOuvrier(){const v=document.getElementById('new-ouvrier').value.trim();if(!v)return;cfg.ouvriers.push(v);await saveCfg('ouvriers');document.getElementById('new-ouvrier').value='';populateSelects();renderConfig();}
 async function delOuvrier(i){cfg.ouvriers.splice(i,1);await saveCfg('ouvriers');populateSelects();renderConfig();}
-async function addChantier(){const v=document.getElementById('new-chantier').value.trim();if(!v)return;cfg.chantiers.push(v);await saveCfg('chantiers');document.getElementById('new-chantier').value='';populateSelects();renderConfig();}
+async function addChantier(){const v=document.getElementById('new-chantier').value.trim();if(!v)return;cfg.chantiers.push(v);cfg.chantiers.sort((a,b)=>a.localeCompare(b,'fr'));await saveCfg('chantiers');document.getElementById('new-chantier').value='';populateSelects();renderConfig();}
 async function delChantier(i){cfg.chantiers.splice(i,1);await saveCfg('chantiers');populateSelects();renderConfig();}
 
 function exportCSV(){
